@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星际宠物嘟嘟 - 你的外星好朋友</title>
+    <style>
+        body {
+            margin: 0; padding: 0; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #fff; height: 100vh; display: flex; flex-direction: column; align-items: center;
+            overflow: hidden;
+        }
+
+        #startOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; z-index: 999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        .start-btn {
+            padding: 15px 40px; font-size: 20px; font-weight: bold; border-radius: 30px;
+            background: #f97316; color: white; border: none; cursor: pointer;
+            box-shadow: 0 0 20px rgba(249,115,22,0.5); animation: pulse 2s infinite;
+            margin-top: 20px;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .name-input {
+            padding: 12px 20px; font-size: 18px; border-radius: 10px; border: 2px solid #38bdf8;
+            background: rgba(0,0,0,0.5); color: white; text-align: center; outline: none;
+            display: none; margin-top: 20px;
+        }
+
+        .top-bar {
+            width: 100%; max-width: 600px; background: rgba(255,255,255,0.1);
+            border-radius: 0 0 20px 20px; padding: 15px; display: flex;
+            justify-content: space-between; align-items: center; backdrop-filter: blur(10px);
+        }
+        .pet-info { display: flex; align-items: center; gap: 15px; }
+        .friendship-bar-bg { width: 100px; height: 10px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 5px; }
+        .friendship-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f472b6, #fb923c); transition: width 0.5s; }
+        
+        .top-right { display: flex; gap: 8px; align-items: center; }
+        .icon-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 5px 10px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .icon-btn:hover { background: rgba(255,255,255,0.4); }
+        .level-box { font-size: 15px; font-weight: bold; color: #38bdf8; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 10px; }
+
+        .pet-stage { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; position: relative; min-height: 110px; }
+        .dudu {
+            width: 90px; height: 90px; background: radial-gradient(circle at 30% 30%, #38bdf8, #3b82f6);
+            border-radius: 50%; box-shadow: 0 0 40px rgba(56,189,248,0.5);
+            animation: float 3s infinite; display: flex; justify-content: center; align-items: center; position: relative;
+        }
+        .eye { width: 12px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 28px; animation: blink 4s infinite; }
+        .eye.left { left: 22px; } .eye.right { right: 22px; }
+        .pupil { width: 6px; height: 6px; background: #000; border-radius: 50%; position: absolute; bottom: 3px; left: 3px; }
+        .mouth { width: 18px; height: 8px; border-bottom: 4px solid white; border-radius: 0 0 10px 10px; position: absolute; bottom: 18px; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+
+        .chat-container { width: 100%; max-width: 600px; height: 340px; background: rgba(255,255,255,0.05); border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; box-sizing: border-box; }
+        .bubble { max-width: 90%; padding: 12px 16px; border-radius: 15px; font-size: 15px; line-height: 1.6; animation: popIn 0.3s ease-out; }
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .bubble.pet { background: #3b82f6; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .bubble.user { background: #22c55e; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .bubble.fact { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); align-self: flex-start; border: 2px solid #fcd34d; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
+        .bubble.loading { background: #475569; color: #cbd5e1; }
+
+        .bottom-area { width: 100%; max-width: 600px; padding: 15px; background: rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
+        .options-grid { display: flex; flex-direction: column; gap: 10px; }
+        .option-btn {
+            width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #38bdf8;
+            background: rgba(56,189,248,0.2); color: white; font-size: 16px;
+            cursor: pointer; text-align: left; font-weight: bold; transition: 0.2s;
+        }
+        .option-btn:hover { background: rgba(56,189,248,0.4); }
+        .help-btn { border-color: #fbbf24; color: #fbbf24; text-align: center; background: rgba(251,191,36,0.2); }
+        .next-btn { border-color: #22c55e; color: #22c55e; text-align: center; background: rgba(34,197,94,0.2); display: none; margin-top: 10px;}
+
+        .input-area { display: none; gap: 10px; }
+        .input-area.active { display: flex; }
+        .input-area input { flex: 1; padding: 12px 15px; border-radius: 25px; border: none; outline: none; font-size: 16px; background: rgba(255,255,255,0.9); color: #333; }
+        .input-area button { padding: 0 25px; border-radius: 25px; border: none; cursor: pointer; background: #f97316; color: white; font-weight: bold; font-size: 16px; }
+
+        #wrongBookModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 1000; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            width: 90%; max-width: 500px; max-height: 80vh; background: #1e293b;
+            border-radius: 20px; padding: 20px; overflow-y: auto; border: 2px solid #38bdf8;
+        }
+        .wrong-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .wrong-item h4 { margin: 0 0 10px 0; color: #38bdf8; font-size: 16px; }
+        .wrong-item p { margin: 5px 0; font-size: 14px; color: #cbd5e1; }
+        .wrong-item .correct-ans { color: #22c55e; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="startOverlay">
+        <div style="width: 100px; height: 100px; background: #38bdf8; border-radius: 50%; margin-bottom: 20px; box-shadow: 0 0 40px #38bdf8;"></div>
+        <button class="start-btn" id="wakeBtn" onclick="startInteraction()">点击唤醒星际宠物</button>
+        <input type="text" id="nameInput" class="name-input" placeholder="输入名字，按回车交朋友" onkeypress="handleNameEnter(event)">
+    </div>
+
+    <div id="wrongBookModal">
+        <div class="modal-content">
+            <h3 style="text-align: center; color: #fbbf24; margin-top: 0;">📕 嘟嘟的错题本</h3>
+            <div id="wrongList"></div>
+            <button class="start-btn" style="width: 100%; margin-top: 10px; font-size: 16px; animation: none;" onclick="closeWrongBook()">关闭错题本</button>
+        </div>
+    </div>
+
+    <div class="top-bar">
+        <div class="pet-info">
+            <div>
+                <div id="petLevelText" style="font-weight: bold;">好朋友 嘟嘟</div>
+                <div class="friendship-bar-bg"><div class="friendship-bar" id="friendshipBar"></div></div>
+            </div>
+        </div>
+        <div class="top-right">
+            <div class="level-box" id="levelDisplay">今日分享 1/10</div>
+            <button class="icon-btn" onclick="openWrongBook()">📕 错题本</button>
+            <button class="icon-btn" onclick="resetAll()">🔄 重置</button>
+        </div>
+    </div>
+
+    <div class="pet-stage">
+        <div class="dudu">
+            <div class="eye left"><div class="pupil"></div></div>
+            <div class="eye right"><div class="pupil"></div></div>
+            <div class="mouth"></div>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chatContainer"></div>
+
+    <div class="bottom-area">
+        <div class="options-grid" id="optionsGrid"></div>
+        <div class="input-area" id="inputArea">
+            <input type="text" id="userInput" placeholder="和嘟嘟聊聊天吧..." onkeypress="handleEnter(event)">
+            <button onclick="sendFreeChat()">发送</button>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // ================= 配置区 =================
+        // API Key 从 config.js 读取；该文件已被 .gitignore 忽略，不会提交到仓库。
+        // 首次使用请复制 config.example.js 为 config.js，并填入你的 DeepSeek API Key。
+        const DEEPSEEK_API_KEY = (window.DUDU_CONFIG && window.DUDU_CONFIG.DEEPSEEK_API_KEY) || "";
+        // ==========================================
+        
+        let studentName = localStorage.getItem('dudu_student_name') || "";
+        let wrongBook = JSON.parse(localStorage.getItem('dudu_wrong_book')) || [];
+        
+        let intimacy = 0;
+        let currentVoice = null;
+        let currentLevel = 1; 
+        const MAX_LEVEL = 10;
+        let storyMemory = "你是外星宠物嘟嘟，有实体和手脚。你寄宿在好朋友家里，每天自己去探索地球的奇妙现象。";
+
+        function initVoice() {
+            let voices = window.speechSynthesis.getVoices();
+            currentVoice = voices.find(v => v.lang.includes('zh') && (v.name.includes('Xiaoxiao') || v.name.includes('Yunxi'))) 
+                        || voices.find(v => v.lang.includes('zh-CN')) || voices[0];
+        }
+        window.speechSynthesis.onvoiceschanged = initVoice;
+
+        async function startInteraction() {
+            if (!DEEPSEEK_API_KEY) {
+                alert("还没有配置 AI 钥匙哦！请让老师或家长把 config.example.js 复制为 config.js，并填入 DeepSeek API Key。");
+            }
+            let u = new SpeechSynthesisUtterance(""); window.speechSynthesis.speak(u); initVoice();
+            
+            if(studentName) {
+                document.getElementById('startOverlay').style.display = 'none';
+                await speakText(`哈喽，今天过得怎么样呀？`);
+                startDailyChat();
+            } else {
+                document.getElementById('wakeBtn').style.display = 'none';
+                document.getElementById('nameInput').style.display = 'block';
+                document.getElementById('nameInput').focus();
+                await speakText("哇！地球好大呀！你好，我是外星宠物嘟嘟，你叫什么名字呀？");
+            }
+        }
+
+        async function handleNameEnter(e) {
+            if(e.key === 'Enter') {
+                let val = document.getElementById('nameInput').value.trim();
+                if(val) {
+                    studentName = val;
+                    localStorage.setItem('dudu_student_name', studentName);
+                    document.getElementById('nameInput').style.display = 'none';
+                    document.getElementById('startOverlay').style.display = 'none';
+                    
+                    await speakText(`很高兴认识你！我们做好朋友吧！`);
+                    setTimeout(() => startDailyChat(), 2000);
+                }
+            }
+        }
+
+        // 语音朗读过滤网（过滤语气词、Emoji等）
+        function speakText(text) {
+            return new Promise((resolve) => {
+                if (!('speechSynthesis' in window)) { resolve(); return; }
+                window.speechSynthesis.cancel(); 
+                
+                let cleanText = text
+                    .replace(/💡【嘟嘟的神奇小拓展】：/g, "对了，再告诉你一个神奇小拓展！") 
+                    .replace(/🎉 /g, "")
+                    .replace(/\(亲密度\+10\)/g, "")
+                    .replace(/[\u{1F300}-\u{1F9FF}]/gu, "") 
+                    .replace(/🤔/g, "");
+
+                let utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'zh-CN'; utterance.rate = 1.1; utterance.pitch = 1.6;
+                if (currentVoice) utterance.voice = currentVoice;
+                utterance.onend = resolve; utterance.onerror = resolve;
+                window.speechSynthesis.speak(utterance);
+            });
+        }
+
+        async function addMessage(text, type = 'pet') {
+            const chatContainer = document.getElementById('chatContainer');
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${type}`;
+            bubble.innerText = text; 
+            chatContainer.appendChild(bubble);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            if(type !== 'user') await speakText(text); 
+        }
+
+        async function callAI(systemPrompt, userPrompt) {
+            try {
+                let res = await fetch("https://api.deepseek.com/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
+                    body: JSON.stringify({ 
+                        model: "deepseek-chat", 
+                        messages: [{role:"system", content: systemPrompt}, {role:"user", content: userPrompt}], 
+                        temperature: 0.85 
+                    })
+                });
+                let data = await res.json();
+                return data.choices[0].message.content;
+            } catch(e) { return "网络故障。"; }
+        }
+
+        async function startDailyChat() {
+            await addMessage(`今天我又发现了地球上的神奇现象！`, 'pet');
+            await addMessage(`你愿意听我分享，并帮我解答疑惑吗？`, 'pet');
+            loadLevel();
+        }
+
+        async function loadLevel() {
+            document.getElementById('levelDisplay').innerText = `今日分享 ${currentLevel}/${MAX_LEVEL}`;
+            document.getElementById('optionsGrid').innerHTML = "";
+            document.getElementById('inputArea').classList.remove('active');
+
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingBubble = document.createElement('div');
+            loadingBubble.className = 'bubble pet loading';
+            loadingBubble.innerText = "嘟嘟正在思考...";
+            chatContainer.appendChild(loadingBubble);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // 核心 Prompt 重写：随机学科、自然称呼、禁哈哈、少叫名字
+            let sysPrompt = `
+                你是一个外星宠物（嘟嘟），有实体和手脚，生活在地球好朋友的家里。
+                背景：${storyMemory}
+                现在是第 ${currentLevel} 个分享。
+
+                【⚠️ 绝对不可违反的死命令】：
+                1. 语气称呼：像真正的好朋友一样自然对话。大部分时候用“你”即可。绝对禁止使用“主人”和“哈哈”，绝对禁止每次说话都叫名字（只有在强烈夸奖时才叫【${studentName}】）。
+                2. 场景：必须是你【自己】的经历，绝不能出现“帮你”、“看你”。物品叫真名。
+                3. 学科广度（重点）：绝对不准全是物理题！请从【物理、化学、生物（植物/动物）、天文（星星/宇宙）、地理（天气/地貌）】中随机挑选一个学科，作为本关的主题。
+                4. 解释：先用大白话打比方，再说：“这在科学上叫【XX】。”
+                5. 趣味猜猜看：提出一个有趣的现象，给三个猜测选项。
+                
+                请严格返回单行 JSON：
+                {"scene":"今天我...", 
+                 "question":"题目", "options":["A. xx","B. xx","C. xx"], "correct":"A. xx", 
+                 "feedback_correct":"你太棒啦！...", "feedback_wrong":"哎呀，再想一想...", 
+                 "explain":"大白话比喻+顺嘴提词汇", 
+                 "fun_question":"如果我把...你猜会发生什么？", "fun_options":["A. xx","B. xx","C. xx"], "fun_correct":"A. xx", 
+                 "fun_result":"揭晓答案+解释，并鼓励他自己试试"}
+            `;
+            let resText = await callAI(sysPrompt, "请分享今天的日常");
+            
+            chatContainer.removeChild(loadingBubble);
+
+            let q;
+            try {
+                let jsonStr = resText.substring(resText.indexOf('{'), resText.lastIndexOf('}') + 1);
+                q = JSON.parse(jsonStr);
+                q.scene = q.scene.replace(/帮你/g, "").replace(/看你/g, ""); // 防幻觉
+                // 前端强制过滤“哈哈”和“主人”
+                q.feedback_correct = q.feedback_correct.replace(/哈哈/g, "").replace(/主人/g, "你");
+                q.feedback_wrong = q.feedback_wrong.replace(/哈哈/g, "").replace(/主人/g, "你");
+                q.fun_result = q.fun_result.replace(/哈哈/g, "").replace(/主人/g, "你");
+                storyMemory += ` 刚才聊了：${q.scene}`;
+            } catch(e) {
+                // 兜底数据换成了【天文】和【生物】
+                q = { 
+                    scene: `昨晚我趴在窗台上看夜空，发现星星总是冲我眨眼睛，一闪一闪的！我在外星都没见过这种现象，这是为什么呀？`, 
+                    question: "为什么我们在地球上看到的星星会一闪一闪的？", 
+                    options: ["A. 星星自己在发光发热", "B. 地球的大气层像水一样抖动，光线穿过时被折射了", "C. 星星快要熄灭了"], 
+                    correct: "B. 地球的大气层像水一样抖动，光线穿过时被折射了", 
+                    feedback_correct: `你太聪明啦！连这个都知道！`, 
+                    feedback_wrong: `哎呀，你再想想，如果在游泳池底看岸上的灯，灯是不是也会晃动？`, 
+                    explain: `地球的大气层不是静止的，像水波一样流动。星光穿过大气层时被折射来折射去，看起来就像在眨眼了。这在科学上叫【大气折射】。`, 
+                    fun_question: `那我考考你，白天我在看天上的云，发现云是白色的，但快下雨时云却变成了黑色，你猜是为什么？`, 
+                    fun_options: ["A. 云变成了黑炭", "B. 云太厚了，阳光透不过去", "C. 乌云在生气"], 
+                    fun_correct: "B. 云太厚了，阳光透不过去", 
+                    fun_result: `没错！快下雨的云里面全是水滴，太厚了，阳光穿不透，看着就变成黑压压的啦。下次下雨前你可以抬头看看！` 
+                };
+            }
+
+            await addMessage(q.scene, 'pet');
+            await addMessage(q.question, 'pet');
+
+            let grid = document.getElementById('optionsGrid');
+            q.options.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt, q);
+                grid.appendChild(btn);
+            });
+
+            let helpBtn = document.createElement('button');
+            helpBtn.className = 'option-btn help-btn';
+            helpBtn.innerText = "🤔 我不知道，求嘟嘟提示";
+            helpBtn.onclick = () => checkAnswer("我不知道", q);
+            grid.appendChild(helpBtn);
+        }
+
+        async function checkAnswer(selected, q) {
+            document.getElementById('optionsGrid').innerHTML = ""; 
+            let userText = selected === "我不知道" ? "我不知道，求提示" : `我选：${selected}`;
+            await addMessage(userText, 'user');
+
+            let isCorrect = (selected === q.correct);
+            let reply = isCorrect ? q.feedback_correct : q.feedback_wrong;
+            
+            await addMessage(reply, 'pet');
+
+            if(isCorrect) {
+                await addMessage(`🎉 ${q.explain}`, 'pet');
+                
+                intimacy += 10;
+                document.getElementById('friendshipBar').style.width = (currentLevel * 10) + '%';
+                currentLevel++;
+
+                setTimeout(() => startFunExperiment(q), 2000);
+
+            } else {
+                recordWrongQuestion(q, selected);
+                let grid = document.getElementById('optionsGrid');
+                q.options.forEach(opt => {
+                    let btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.innerText = opt;
+                    btn.onclick = () => checkAnswer(opt, q);
+                    grid.appendChild(btn);
+                });
+            }
+        }
+
+        async function startFunExperiment(q) {
+            if(!q.fun_question) { endLevel(); return; }
+
+            await addMessage(`💡【嘟嘟的神奇小拓展】：${q.fun_question}`, 'fact');
+
+            let grid = document.getElementById('optionsGrid');
+            grid.innerHTML = "";
+            q.fun_options.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkFunAnswer(opt, q);
+                grid.appendChild(btn);
+            });
+        }
+
+        async function checkFunAnswer(selected, q) {
+            document.getElementById('optionsGrid').innerHTML = ""; 
+            await addMessage(`我猜：${selected}`, 'user');
+
+            let isCorrect = (selected === q.fun_correct);
+            // 同样在前端拦截哈哈
+            let resultText = q.fun_result.replace(/哈哈/g, "").replace(/主人/g, "你");
+
+            if(isCorrect) {
+                await addMessage(`🎉 哇！你猜对啦！${resultText}`, 'pet');
+            } else {
+                await addMessage(`其实正确答案是【${q.fun_correct}】。${resultText}`, 'pet');
+            }
+
+            endLevel();
+        }
+
+        function endLevel() {
+            if(currentLevel <= MAX_LEVEL) {
+                let grid = document.getElementById('optionsGrid');
+                let nextBtn = document.createElement('button');
+                nextBtn.className = 'option-btn next-btn';
+                nextBtn.innerText = "听下一个故事！";
+                nextBtn.style.display = "block";
+                nextBtn.onclick = () => {
+                    grid.innerHTML = "";
+                    loadLevel();
+                };
+                grid.appendChild(nextBtn);
+            } else {
+                document.getElementById('levelDisplay').innerText = "今日分享完毕";
+                addMessage(`今天聊天真开心！我学到了好多科学魔法！`, 'pet');
+                addMessage(`明天我还会把新发现的有趣事情告诉你哦！快去休息吧！`, 'pet');
+                document.getElementById('inputArea').classList.add('active');
+            }
+        }
+
+        function recordWrongQuestion(q, selected) {
+            if(!wrongBook.some(item => item.question === q.question)) {
+                wrongBook.push({ question: q.question, correct: q.correct, explain: q.explain });
+                localStorage.setItem('dudu_wrong_book', JSON.stringify(wrongBook));
+            }
+        }
+
+        function openWrongBook() {
+            let modal = document.getElementById('wrongBookModal');
+            let list = document.getElementById('wrongList');
+            list.innerHTML = wrongBook.length === 0 ? "<p style='text-align:center; color:#94a3b8;'>太厉害了！错题本是空的！</p>" : "";
+            
+            wrongBook.forEach((item, index) => {
+                list.innerHTML += `
+                    <div class="wrong-item">
+                        <h4>错题 ${index + 1}</h4>
+                        <p>题目：${item.question}</p>
+                        <p class="correct-ans">正确答案：${item.correct}</p>
+                        <p>嘟嘟解析：${item.explain}</p>
+                    </div>
+                `;
+            });
+            modal.style.display = 'flex';
+        }
+
+        function closeWrongBook() { document.getElementById('wrongBookModal').style.display = 'none'; }
+        function resetAll() { if(confirm("确定要清空名字和错题记录，重新开始吗？")) { localStorage.clear(); location.reload(); } }
+
+        async function sendFreeChat() {
+            let input = document.getElementById('userInput');
+            let text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            await addMessage(text, 'user');
+            let sysPrompt = `你是外星宠物嘟嘟，正在聊天。用生动有趣的语言回答问题，多用比喻。绝对不能叫主人，绝对不能说哈哈。`;
+            let reply = await callAI(sysPrompt, text);
+            reply = reply.replace(/哈哈/g, "").replace(/主人/g, "你");
+            await addMessage(reply, 'pet');
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') sendFreeChat(); }
+    </script>
+</body>
+</html>
