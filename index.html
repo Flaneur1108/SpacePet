@@ -777,6 +777,7 @@
                 LOCAL_QUESTIONS.push({
                     subject: subject,
                     scene: scene || "今天我又发现了一个有趣的现象！",
+                    is_extra: true,
                     question: question,
                     options: options,
                     correct: options[correctIdx],
@@ -1275,18 +1276,37 @@
         }
 
         async function checkAnswer(selected, q) {
-            document.getElementById('optionsGrid').innerHTML = ""; 
+            document.getElementById('optionsGrid').innerHTML = "";
             let userText = selected === "我不知道" ? "我不知道，求提示" : `我选：${selected}`;
             await addMessage(userText, 'user');
 
             let isCorrect = (selected === q.correct);
-            let reply = isCorrect ? q.feedback_correct : q.feedback_wrong;
-            
+            let reply;
+
+            if (isCorrect) {
+                reply = q.feedback_correct;
+            } else if (q.is_extra) {
+                // 新增题目没有逐题写提示词，答错或求助时直接把科学道理讲清楚，再让孩子试一次
+                if (!q._explained) {
+                    reply = (selected === "我不知道" ? "没关系，嘟嘟给你讲讲：" : "差一点点，嘟嘟给你讲讲：") + q.explain;
+                    q._explained = true;
+                } else {
+                    reply = "再仔细看看嘟嘟刚才的讲解，想想哪个选项最符合。";
+                }
+            } else {
+                // 原文件里的 40 道题保留各自写好的提示词，不做改动
+                reply = q.feedback_wrong;
+            }
+
             await addMessage(reply, 'pet');
 
             if(isCorrect) {
-                await addMessage(`🎉 ${q.explain}`, 'pet');
-                
+                if (q.is_extra && q._explained) {
+                    await addMessage(`这次记住啦！`, 'pet');
+                } else {
+                    await addMessage(`🎉 ${q.explain}`, 'pet');
+                }
+
                 intimacy += 10;
                 document.getElementById('friendshipBar').style.width = (currentLevel * 10) + '%';
                 currentLevel++;
